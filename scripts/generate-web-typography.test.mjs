@@ -9,7 +9,9 @@ test('exposes the seven approved sizes and the existing three weights',()=>{
  for(const[group,size]of[['caption',10],['headline',24],['display',48]])for(const[variant,weight]of[['regular',400],['medium',500],['semibold',600]]){
   const style=declarations(css,`text-${group}-${variant}`);assert.equal(style['font-size'],`${size}px`);assert.equal(style['font-weight'],String(weight));assert.equal(style['font-family'],'"Roboto", sans-serif');
  }
- assert.equal(declarations(css,'text-title-3-medium')['font-weight'],'600');
+ assert.equal(declarations(css,'text-title-3-semibold')['font-weight'],'600');
+ assert.equal(declarations(css,'text-title-3-semibold')['font-size'],'14px');
+ assert.ok(!css.includes('text-title-3-medium'));
  assert.equal(declarations(css,'text-body-regular')['font-size'],'14px');
  assert.equal((css.match(/font-family:/g)??[]).length,1);
 });

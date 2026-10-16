@@ -155,7 +155,7 @@
 .text-title-regular,
 .text-title-1-medium,
 .text-title-2-medium,
-.text-title-3-medium,
+.text-title-3-semibold,
 .text-caption-regular,
 .text-caption-medium,
 .text-caption-semibold,
@@ -176,7 +176,7 @@
 .text-body-regular,
 .text-subhead-medium,
 .text-subhead-regular,
-.text-title-3-medium {
+.text-title-3-semibold {
   font-size: 14px;
 }
 
@@ -228,7 +228,7 @@
   font-size: 16px;
 }
 
-.text-title-3-medium,
+.text-title-3-semibold,
 .text-caption-semibold,
 .text-headline-semibold,
 .text-display-semibold {
