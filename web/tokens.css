@@ -151,9 +151,8 @@
 .text-footnote-regular,
 .text-subhead-medium,
 .text-subhead-regular,
-.text-title-medium,
-.text-title-regular,
 .text-title-1-medium,
+.text-title-1-regular,
 .text-title-2-medium,
 .text-title-3-semibold,
 .text-caption-regular,
@@ -183,7 +182,6 @@
 .text-body-medium,
 .text-footnote-medium,
 .text-subhead-medium,
-.text-title-medium,
 .text-title-1-medium,
 .text-title-2-medium,
 .text-caption-medium,
@@ -206,7 +204,7 @@
 .text-body-regular,
 .text-footnote-regular,
 .text-subhead-regular,
-.text-title-regular,
+.text-title-1-regular,
 .text-caption-regular,
 .text-headline-regular,
 .text-display-regular {
@@ -218,9 +216,8 @@
   font-size: 12px;
 }
 
-.text-title-medium,
-.text-title-regular,
-.text-title-1-medium {
+.text-title-1-medium,
+.text-title-1-regular {
   font-size: 18px;
 }
 
