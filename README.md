@@ -203,3 +203,12 @@ https://github.com/101-APP/101-Design
 ```
 
 </details>
+
+### Веб-типографика
+
+Шкала веба: 10, 12, 14, 16, 18, 24 и 48 px; веса 400, 500 и 600.
+`caption` использует 10 px, `headline` — 24 px, `display` — 48 px.
+Источник — `styles.text.web` в `tokens.json`. После изменения выполните
+`node scripts/generate-web-typography.mjs` и
+`node --test scripts/generate-web-typography.test.mjs`. Генератор объединяет
+одинаковые свойства классов в общие CSS-правила.

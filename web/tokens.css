@@ -144,119 +144,113 @@
   --color-toast: #000000CC;
 }
 
-.text-body-light {
+.text-body-medium,
+.text-body-light,
+.text-body-regular,
+.text-footnote-medium,
+.text-footnote-regular,
+.text-subhead-medium,
+.text-subhead-regular,
+.text-title-medium,
+.text-title-regular,
+.text-title-1-medium,
+.text-title-2-medium,
+.text-title-3-medium,
+.text-caption-regular,
+.text-caption-medium,
+.text-caption-semibold,
+.text-headline-regular,
+.text-headline-medium,
+.text-headline-semibold,
+.text-display-regular,
+.text-display-medium,
+.text-display-semibold {
   font-family: "Roboto", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
   line-height: normal;
   letter-spacing: calc(1em * 0 / 100);
   text-decoration-line: none;
-  font-feature-settings: "lnum" 1, "tnum" 1;
 }
 
-.text-body-medium {
-  font-family: "Roboto", sans-serif;
+.text-body-medium,
+.text-body-light,
+.text-body-regular,
+.text-subhead-medium,
+.text-subhead-regular,
+.text-title-3-medium {
   font-size: 14px;
+}
+
+.text-body-medium,
+.text-footnote-medium,
+.text-subhead-medium,
+.text-title-medium,
+.text-title-1-medium,
+.text-title-2-medium,
+.text-caption-medium,
+.text-headline-medium,
+.text-display-medium {
   font-weight: 500;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
-  font-feature-settings: "lnum" 1, "tnum" 1;
 }
 
-.text-body-regular {
-  font-family: "Roboto", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
-  font-feature-settings: "lnum" 1, "tnum" 1;
-}
-
-.text-footnote-medium {
-  font-family: "Roboto", sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
-  font-feature-settings: "lnum" 1, "tnum" 1;
-}
-
-.text-footnote-regular {
-  font-family: "Roboto", sans-serif;
-  font-size: 12px;
-  font-weight: 400;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
-  font-feature-settings: "lnum" 1, "tnum" 1;
-}
-
-.text-subhead-medium {
-  font-family: "Roboto", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
-  font-feature-settings: "lnum" 1, "tnum" 1;
-}
-
+.text-body-medium,
+.text-body-light,
+.text-body-regular,
+.text-footnote-medium,
+.text-footnote-regular,
+.text-subhead-medium,
 .text-subhead-regular {
-  font-family: "Roboto", sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
   font-feature-settings: "lnum" 1, "tnum" 1;
 }
 
+.text-body-light,
+.text-body-regular,
+.text-footnote-regular,
+.text-subhead-regular,
+.text-title-regular,
+.text-caption-regular,
+.text-headline-regular,
+.text-display-regular {
+  font-weight: 400;
+}
+
+.text-footnote-medium,
+.text-footnote-regular {
+  font-size: 12px;
+}
+
+.text-title-medium,
+.text-title-regular,
 .text-title-1-medium {
-  font-family: "Roboto", sans-serif;
   font-size: 18px;
-  font-weight: 500;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
 }
 
 .text-title-2-medium {
-  font-family: "Roboto", sans-serif;
   font-size: 16px;
-  font-weight: 500;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
 }
 
-.text-title-3-medium {
-  font-family: "Roboto", sans-serif;
-  font-size: 14px;
+.text-title-3-medium,
+.text-caption-semibold,
+.text-headline-semibold,
+.text-display-semibold {
   font-weight: 600;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
 }
 
-.text-title-medium {
-  font-family: "Roboto", sans-serif;
-  font-size: 18px;
-  font-weight: 500;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
+.text-caption-regular,
+.text-caption-medium,
+.text-caption-semibold {
+  font-size: 10px;
 }
 
-.text-title-regular {
-  font-family: "Roboto", sans-serif;
-  font-size: 18px;
-  font-weight: 400;
-  line-height: normal;
-  letter-spacing: calc(1em * 0 / 100);
-  text-decoration-line: none;
+.text-headline-regular,
+.text-headline-medium,
+.text-headline-semibold {
+  font-size: 24px;
+}
+
+.text-display-regular,
+.text-display-medium,
+.text-display-semibold {
+  font-size: 48px;
 }
 
 .shadow {

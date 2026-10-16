@@ -75,6 +75,9 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Check shared web typography
+        run: node --test scripts/generate-web-typography.test.mjs
+
       - name: Check resource validator
         run: python3 scripts/test_validate_design_assets.py
 
