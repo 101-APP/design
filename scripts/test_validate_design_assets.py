@@ -9,6 +9,14 @@ spec.loader.exec_module(validator)
 
 
 class ResourceValidationTest(unittest.TestCase):
+    def test_line_height_modifier_is_valid_without_a_font_size(self):
+        validator.validate_tokens({'$type': 'textStyle', 'value': {'lineHeight': {'unit': 'PERCENT', 'value': 150}}})
+
+    def test_invalid_line_height_modifiers_are_rejected(self):
+        for amount in [0, -1, float('nan'), '150']:
+            with self.subTest(amount=amount), self.assertRaises(ValueError):
+                validator.validate_tokens({'$type': 'textStyle', 'value': {'lineHeight': {'unit': 'PERCENT', 'value': amount}}})
+
     def test_invalid_svg_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             icon = pathlib.Path(directory) / 'broken.svg'

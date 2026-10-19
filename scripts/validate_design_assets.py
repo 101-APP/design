@@ -28,9 +28,14 @@ def validate_tokens(source):
                 if not isinstance(value, str) or not re.fullmatch(r'#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?|\{[^{}]+\}', value):
                     raise ValueError(f'{name}: invalid color')
         if node.get('$type') == 'textStyle':
-            size = node.get('value', {}).get('fontSize')
-            if not isinstance(size, (int, float)) or not math.isfinite(size) or size <= 0:
-                raise ValueError(f'{name}: invalid font size')
+            settings = node.get('value', {})
+            measurement, field = settings.get('fontSize'), 'font size'
+            if set(settings) == {'lineHeight'}:
+                height = settings['lineHeight']
+                measurement = height.get('value') if isinstance(height, dict) and height.get('unit') == 'PERCENT' else None
+                field = 'line height'
+            if type(measurement) not in (int, float) or not math.isfinite(measurement) or measurement <= 0:
+                raise ValueError(f'{name}: invalid {field}')
         for key, value in node.items():
             visit(value, f'{name}/{key}')
     visit(source, 'tokens')

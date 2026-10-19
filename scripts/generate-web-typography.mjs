@@ -12,15 +12,16 @@ export const renderWebTypography = (source) => {
   const groups = new Map();
   for (const { name, value } of collectStyles(source.styles.text.web)) {
     const properties = {
-      'font-family': `"${value.fontFamily}", sans-serif`,
-      'font-size': `${value.fontSize}px`,
-      'font-weight': String(value.fontWeight),
-      'line-height': 'normal',
-      'letter-spacing': 'calc(1em * 0 / 100)',
-      'text-decoration-line': 'none',
+      'font-family': value.fontFamily === undefined ? undefined : `"${value.fontFamily}", sans-serif`,
+      'font-size': value.fontSize === undefined ? undefined : `${value.fontSize}px`,
+      'font-weight': value.fontWeight === undefined ? undefined : String(value.fontWeight),
+      'line-height': value.lineHeight === undefined ? undefined : value.lineHeight.unit === 'PERCENT' ? String(value.lineHeight.value / 100) : 'normal',
+      'letter-spacing': value.letterSpacing === undefined ? undefined : 'calc(1em * 0 / 100)',
+      'text-decoration-line': value.textDecoration === undefined ? undefined : 'none',
     };
     if (Object.keys(value.openTypeFeatures ?? {}).length) properties['font-feature-settings'] = Object.entries(value.openTypeFeatures).map(([tag, enabled]) => `"${tag.toLowerCase()}" ${enabled ? 1 : 0}`).join(', ');
     for (const [property, cssValue] of Object.entries(properties)) {
+      if (cssValue === undefined) continue;
       const key = `${property}: ${cssValue};`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(`.${name}`);

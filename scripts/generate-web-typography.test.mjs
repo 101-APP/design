@@ -4,6 +4,10 @@ import test from 'node:test';
 import { renderWebTypography } from './generate-web-typography.mjs';
 const source=JSON.parse(fs.readFileSync(new URL('../tokens.json',import.meta.url),'utf8'));
 const declarations=(css,name)=>{const values={};for(const match of css.matchAll(/([^{}]+)\{([^{}]+)\}/g)){if(!match[1].trim().split(/,\s*/).includes('.'+name))continue;for(const decl of match[2].matchAll(/([\w-]+):\s*([^;]+);/g))values[decl[1]]=decl[2].trim()}return values};
+test('a reading modifier emits only its proportional line height',()=>{
+ const css=renderWebTypography({styles:{text:{web:{reading:{$type:'textStyle',value:{lineHeight:{unit:'PERCENT',value:150}}}}}}});
+ assert.equal(css,'.text-reading {\n  line-height: 1.5;\n}\n');
+});
 test('exposes the seven approved sizes and the existing three weights',()=>{
  const css=renderWebTypography(source);
  for(const[group,size]of[['caption',10],['headline',24],['display',48]])for(const[variant,weight]of[['regular',400],['medium',500],['semibold',600]]){
