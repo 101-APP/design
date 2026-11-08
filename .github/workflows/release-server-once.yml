@@ -47,11 +47,20 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           scope: "@101app"
 
+      - name: Download verified Java 17
+        run: |
+          JAVA_ARCHIVE_URL="https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.21_9.tar.gz"
+          curl --fail --location --retry 3 --max-time 120 "$JAVA_ARCHIVE_URL" --output "$RUNNER_TEMP/java17.tar.gz"
+          curl --fail --location --retry 3 --max-time 120 "$JAVA_ARCHIVE_URL.sha256.txt" --output "$RUNNER_TEMP/java17.sha256"
+          JAVA_ARCHIVE_SHA="$(cut -d ' ' -f 1 "$RUNNER_TEMP/java17.sha256")"
+          printf '%s  %s\n' "$JAVA_ARCHIVE_SHA" "$RUNNER_TEMP/java17.tar.gz" | sha256sum --check -
+
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
-          distribution: "temurin"
-          java-version: "17"
+          distribution: "jdkfile"
+          java-version: "17.0.21"
+          jdkFile: ${{ runner.temp }}/java17.tar.gz
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
