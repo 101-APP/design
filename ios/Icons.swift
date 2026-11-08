@@ -34,6 +34,7 @@ public enum Icons: String, CaseIterable, Equatable {
     case monochromeBalance = "icon-monochrome-balance"
     case monochromeBank = "icon-monochrome-bank"
     case monochromeBill = "icon-monochrome-bill"
+    case monochromeBinoculars = "icon-monochrome-binoculars"
     case monochromeCalculator = "icon-monochrome-calculator"
     case monochromeCalendar = "icon-monochrome-calendar"
     case monochromeCamera = "icon-monochrome-camera"
