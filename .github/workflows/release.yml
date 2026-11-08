@@ -23,7 +23,8 @@ jobs:
   release:
     if: github.ref == 'refs/heads/main'
     name: Release all platforms and publish @101app/design-tokens-web
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, design-build]
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -56,11 +57,28 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           scope: "@101app"
 
+      - name: Download verified Java 17
+        run: |
+          JAVA_ARCHIVE_URL="https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.21_9.tar.gz"
+          JAVA_ARCHIVE_PATH="$HOME/tool-downloads/java17.tar.gz"
+          mkdir -p "$HOME/tool-downloads"
+          curl --fail --location --retry 3 --connect-timeout 15 --max-time 120 "$JAVA_ARCHIVE_URL.sha256.txt" --output "$RUNNER_TEMP/java17.sha256"
+          JAVA_ARCHIVE_SHA="$(cut -d ' ' -f 1 "$RUNNER_TEMP/java17.sha256")"
+          if ! printf '%s  %s\n' "$JAVA_ARCHIVE_SHA" "$JAVA_ARCHIVE_PATH" | sha256sum --check --status -; then
+            curl --fail --location --retry 3 --connect-timeout 15 --max-time 900 --continue-at - "$JAVA_ARCHIVE_URL" --output "$JAVA_ARCHIVE_PATH"
+          fi
+          if ! printf '%s  %s\n' "$JAVA_ARCHIVE_SHA" "$JAVA_ARCHIVE_PATH" | sha256sum --check -; then
+            rm -f "$JAVA_ARCHIVE_PATH"
+            exit 1
+          fi
+          printf 'JAVA_ARCHIVE_PATH=%s\n' "$JAVA_ARCHIVE_PATH" >> "$GITHUB_ENV"
+
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
-          distribution: "temurin"
-          java-version: "17"
+          distribution: "jdkfile"
+          java-version: "17.0.21"
+          jdk-file: ${{ env.JAVA_ARCHIVE_PATH }}
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
@@ -74,6 +92,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: "8.9"
+          cache-disabled: true
 
       - name: Check shared web typography
         run: node --test scripts/generate-web-typography.test.mjs

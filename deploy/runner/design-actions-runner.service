@@ -1,0 +1,37 @@
+[Unit]
+Description=GitHub Actions runner for 101 design resources
+After=network-online.target frontend-resource-controls.service
+Wants=network-online.target
+Requires=frontend-resource-controls.service
+
+[Service]
+Slice=system-frontendci.slice
+User=design-actions
+Group=design-actions
+WorkingDirectory=/var/lib/101-design-actions/runner
+Environment=HOME=/var/lib/101-design-actions
+ExecStart=/var/lib/101-design-actions/runner/run.sh
+Restart=always
+RestartSec=10
+KillMode=control-group
+TimeoutStopSec=60
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ReadWritePaths=/var/lib/101-design-actions
+InaccessiblePaths=/etc/101-frontend /srv/101-frontend /var/lib/101-frontend-ci /var/lib/101-frontend-actions /var/lib/101-frontend-notify /var/lib/101-localization-actions
+MemoryHigh=2G
+MemoryMax=3G
+CPUQuota=100%
+CPUWeight=20
+IOAccounting=yes
+IOWeight=20
+IOSchedulingClass=idle
+TasksMax=512
+
+[Install]
+WantedBy=multi-user.target
