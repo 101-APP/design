@@ -282,6 +282,7 @@ public enum Icons: String, CaseIterable, Equatable {
     case monochromeVideoOffFill = "icon-monochrome-video-off-fill"
     case monochromeVideoOn = "icon-monochrome-video-on"
     case monochromeVideoOnFill = "icon-monochrome-video-on-fill"
+    case monochromeVideoOnTrimmed = "icon-monochrome-video-on-trimmed"
     case monochromeVk = "icon-monochrome-vk"
     case monochromeVoice = "icon-monochrome-voice"
     case monochromeVoiceChat = "icon-monochrome-voice-chat"
