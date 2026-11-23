@@ -1,0 +1,33 @@
+[Unit]
+Description=Announce verified 101 design library releases in personal 101 chats
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I -B /usr/local/libexec/design-release-notify/notify.py
+LoadCredential=notification-source.json:/etc/101-frontend/notification-source.json
+StateDirectory=design-release-notify
+StateDirectoryMode=0700
+UMask=0077
+LimitCORE=0
+TimeoutStartSec=2min
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=96M
+CPUQuota=20%
+TasksMax=16
+StandardOutput=journal
+StandardError=journal

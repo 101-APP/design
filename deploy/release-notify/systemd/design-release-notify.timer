@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for a new 101 design library release every 10 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=10min
+AccuracySec=30s
+Unit=design-release-notify.service
+
+[Install]
+WantedBy=timers.target
