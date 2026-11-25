@@ -15,6 +15,7 @@ SENDER = '00000000-0000-4000-8000-000000000001'
 FIRST = '00000000-0000-4000-8000-000000000002'
 SECOND = 'AAAAAAAA-0000-4000-8000-000000000003'
 COMMIT = 'a' * 40
+PREVIOUS_COMMIT = 'c' * 40
 TOKEN = 'header.payload.signature-0123456789'
 PASSWORD = 'never-printed-password'
 
@@ -34,6 +35,8 @@ class Api:
         self.version, self.commit, self.tag = version, commit, tag
         self.calls, self.messages = [], {}
         self.login_status, self.send_status, self.annotated = 200, {}, False
+        self.files, self.tokens = [], {}
+        self.compare_status = 200
 
     def __call__(self, method, url, body=None, token=None):
         self.calls.append((method, url, body, token))
@@ -46,6 +49,13 @@ class Api:
             return 200, {'ref': 'refs/tags/' + self.version, 'object': {'type': kind, 'sha': sha}}
         if url == notify.GITHUB_API + 'tags/' + 'b' * 40:
             return 200, {'object': {'type': 'commit', 'sha': self.tag}}
+        if url.startswith(notify.GITHUB_API + 'ref/tags/'):
+            version = url.rsplit('/', 1)[-1]
+            return 200, {'ref': 'refs/tags/' + version, 'object': {'type': 'commit', 'sha': PREVIOUS_COMMIT}}
+        if url.startswith('https://api.github.com/repos/101-APP/design/compare/'):
+            return self.compare_status, {'files': self.files, 'status': 'ahead'}
+        if url in self.tokens:
+            return 200, self.tokens[url]
         if url == notify.LOGIN_URL:
             return self.login_status, {'token': TOKEN, 'user_guid': SENDER.upper()}
         if url == notify.MESSAGES_URL:
@@ -80,7 +90,8 @@ class ReleaseNotifyTest(unittest.TestCase):
         api = Api()
         result = self.run_pass(api)
         self.assertEqual(result, {'latest': '1.0.203', 'release': 'queued', 'sent': 2, 'pending': 0, 'blocked': 0})
-        text = 'Библиотека дизайна 101 обновлена\n**Версия:** 1.0.203\n**Web:** npm install @101app/design-tokens-web@1.0.203\n**iOS и Android:** тег 1.0.203'
+        text = ('Библиотека дизайна 101 обновлена\n**Версия:** 1.0.203\n**Web:** npm install @101app/design-tokens-web@1.0.203'
+                '\n**iOS и Android:** тег 1.0.203\n\nРесурсы библиотеки не изменились')
         posts = [call for call in api.calls if call[1] == notify.MESSAGES_URL]
         self.assertEqual([call[2]['userGuid'] for call in posts], [FIRST, SECOND])
         self.assertEqual({call[2]['text'] for call in posts}, {text})
@@ -93,6 +104,46 @@ class ReleaseNotifyTest(unittest.TestCase):
         repeat = Api()
         self.assertEqual(self.run_pass(repeat), {'latest': '1.0.203', 'release': 'not_new', 'sent': 0, 'pending': 0, 'blocked': 0})
         self.assertEqual([call[1] for call in repeat.calls], [notify.REGISTRY_URL])
+
+    def test_release_lists_exact_icons_and_tokens_once(self):
+        api = Api()
+        api.files = [
+            {'status': 'added', 'filename': 'web/icons/monochrome/phone-keypad.svg'},
+            {'status': 'added', 'filename': 'sources/icons/monochrome/phone-keypad.svg'},
+            {'status': 'added', 'filename': 'android/res/drawable/icon_monochrome_phone_keypad.xml'},
+            {'status': 'renamed', 'filename': 'web/icons/monochrome/phone-forward.svg',
+             'previous_filename': 'web/icons/monochrome/call-forward.svg'},
+            {'status': 'modified', 'filename': 'tokens.json'},
+        ]
+        for commit, color, weight in [(PREVIOUS_COMMIT, '#fff', 400), (COMMIT, '#eee', 500)]:
+            api.tokens[f'https://raw.githubusercontent.com/101-APP/design/{commit}/tokens.json'] = {
+                'variables': {'text': {'primary': {'$type': 'color', 'modes': {'light': color}}}},
+                'styles': {'text': {'web': {'body': {'$type': 'textStyle', 'value': {'fontWeight': weight}}}}},
+            }
+        text = self.run_pass(api, dry_run=True)['text']
+        self.assertEqual(text.count('phone-keypad'), 1)
+        self.assertIn('Добавлена иконка `phone-keypad`', text)
+        self.assertIn('Иконка `call-forward` переименована в `phone-forward`', text)
+        self.assertIn('Обновлён цвет `text/primary`', text)
+        self.assertIn('Обновлён текстовый стиль `web/body`', text)
+        self.assertIn(f'https://github.com/101-APP/design/compare/{PREVIOUS_COMMIT}...{COMMIT}', text)
+
+    def test_same_commit_has_no_resource_changes(self):
+        self.run_pass(Api())
+        newer = Api(version='1.0.204')
+        result = self.run_pass(newer, dry_run=True)
+        self.assertIn('Ресурсы библиотеки не изменились', result['text'])
+        self.assertFalse(any('/compare/' in call[1] for call in newer.calls))
+
+    def test_diff_outage_preserves_previous_queue_and_retries_new_release(self):
+        self.run_pass(Api())
+        newer = Api(version='1.0.204', commit='d' * 40, tag='d' * 40)
+        newer.compare_status = 503
+        result = self.run_pass(newer)
+        self.assertEqual((result['release'], result['sent']), ('unverified', 0))
+        self.assertNotIn('1.0.204', self.saved()['releases'])
+        newer.compare_status = 200
+        self.assertEqual(self.run_pass(newer)['sent'], 2)
 
     def test_text_and_keys_are_stored_before_the_first_login_or_send(self):
         api, seen = Api(), []

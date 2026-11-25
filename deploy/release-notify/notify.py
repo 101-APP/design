@@ -25,10 +25,15 @@ MESSAGES_URL = API_BASE + '/api/assistant-messages/'
 PACKAGE = '@101app/design-tokens-web'
 REGISTRY_URL = 'https://registry.npmjs.org/@101app%2Fdesign-tokens-web/latest'
 GITHUB_API = 'https://api.github.com/repos/101-APP/design/git/'
+GITHUB_COMPARE = 'https://api.github.com/repos/101-APP/design/compare/'
+GITHUB_WEB_COMPARE = 'https://github.com/101-APP/design/compare/'
+TOKENS_RAW = 'https://raw.githubusercontent.com/101-APP/design/'
 CONFIG_FILE = '/etc/design-release-notify/config.json'
 STATE_DIRECTORY = '/var/lib/design-release-notify'
 CREDENTIAL_NAME = 'notification-source.json'
 MAX_BYTES = 65536
+MAX_DIFF_BYTES = 2 * 1024 * 1024
+MAX_CHANGE_LINES = 12
 MAX_STORE_BYTES = 8 * 1024 * 1024
 TIMEOUT_SECONDS = 10
 KEPT_RELEASES = 20
@@ -37,6 +42,21 @@ PERMANENT_STATUSES = {400, 403, 404, 409}
 GUID = re.compile(r'[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}', re.I)
 VERSION = re.compile(r'(?:0|[1-9]\d{0,5})(?:\.(?:0|[1-9]\d{0,5})){2}')
 COMMIT = re.compile(r'[0-9a-f]{40}')
+COMPARE_ROUTE = re.compile(re.escape(GITHUB_COMPARE) + r'[0-9a-f]{40}\.\.\.[0-9a-f]{40}\?per_page=1')
+TOKENS_ROUTE = re.compile(re.escape(TOKENS_RAW) + r'[0-9a-f]{40}/tokens\.json')
+ICON_FILE = re.compile(r'(?:web|sources)/icons/([a-z0-9-]+)/([a-z0-9-]+)\.svg')
+GENERATED_TOKEN_FILES = {
+    'web/tokens.css', 'ios/Colors.swift', 'ios/Fonts.swift',
+    'android/res/values/colors.xml', 'android/res/values-night/colors.xml', 'android/res/values/fonts.xml',
+}
+CHANGE_LABELS = {
+    'icon': ('Добавлена иконка', 'Обновлена иконка', 'Удалена иконка'),
+    'color': ('Добавлен цвет', 'Обновлён цвет', 'Удалён цвет'),
+    'token': ('Добавлен токен', 'Обновлён токен', 'Удалён токен'),
+    'textStyle': ('Добавлен текстовый стиль', 'Обновлён текстовый стиль', 'Удалён текстовый стиль'),
+    'style': ('Добавлен стиль', 'Обновлён стиль', 'Удалён стиль'),
+    'file': ('Добавлен файл', 'Обновлён файл', 'Удалён файл'),
+}
 TOKEN = re.compile(r'[A-Za-z0-9._-]{20,8192}')
 SAFE_DELIVERY_ERROR = re.compile(r'HTTP_\d{3}|RECEIPT_INVALID|AUTH_UNAVAILABLE')
 
@@ -104,8 +124,11 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def http_json(method, url, body=None, token=None):
-    """Return (status, parsed JSON or None). Only the four known routes are reachable."""
-    if url not in (LOGIN_URL, MESSAGES_URL, REGISTRY_URL) and not url.startswith(GITHUB_API):
+    """Return (status, parsed JSON or None) for known service routes."""
+    is_diff = COMPARE_ROUTE.fullmatch(url) or TOKENS_ROUTE.fullmatch(url)
+    if url not in (LOGIN_URL, MESSAGES_URL, REGISTRY_URL) and not url.startswith(GITHUB_API) and not is_diff:
+        raise NotifyError('ROUTE_INVALID')
+    if is_diff and (method != 'GET' or body is not None):
         raise NotifyError('ROUTE_INVALID')
     # The sender key belongs to the 101 message route and never leaves it.
     if token is not None and url != MESSAGES_URL:
@@ -119,15 +142,18 @@ def http_json(method, url, body=None, token=None):
         headers['Authorization'] = 'JWT ' + token
     request = urllib.request.Request(url, data=data, method=method, headers=headers)
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect)
+    limit = MAX_DIFF_BYTES if is_diff else MAX_BYTES
     try:
         try:
             with opener.open(request, timeout=TIMEOUT_SECONDS) as response:
-                status, raw = response.status, response.read(MAX_BYTES + 1)
+                status, raw = response.status, response.read(limit + 1)
         except urllib.error.HTTPError as error:
-            status, raw = error.code, error.read(MAX_BYTES + 1)
+            status, raw = error.code, error.read(limit + 1)
     except (OSError, ValueError):
         raise NotifyError('NETWORK_UNAVAILABLE') from None
-    if len(raw) > MAX_BYTES:
+    if len(raw) > limit:
+        if is_diff:
+            raise NotifyError('DIFF_TOO_LARGE')
         raise NotifyError('NETWORK_UNAVAILABLE')
     try:
         return status, json.loads(raw)
@@ -201,12 +227,118 @@ def tag_commit(http, version):
     return sha
 
 
-def release_text(version):
+def resource_leaves(node, path=()):
+    if isinstance(node, dict):
+        if '$type' in node:
+            yield '/'.join(path), {key: value for key, value in node.items() if key != 'figmaId'}
+        else:
+            for key, value in node.items():
+                yield from resource_leaves(value, (*path, key))
+
+
+def read_tokens(http, commit):
+    status, data = http('GET', f'{TOKENS_RAW}{commit}/tokens.json')
+    if status == 404:
+        return {}
+    if status != 200 or not isinstance(data, dict):
+        raise NotifyError('DIFF_UNAVAILABLE')
+    return data
+
+
+def inline_name(name):
+    return '`' + re.sub(r'[`\x00-\x1f\x7f]', ' ', name)[:100] + '`'
+
+
+def token_changes(before, after):
+    for group in ('variables', 'styles'):
+        old, new = (dict(resource_leaves(data.get(group))) for data in (before, after))
+        for name in sorted(old.keys() | new.keys()):
+            if old.get(name) == new.get(name):
+                continue
+            kind = (new.get(name) or old[name]).get('$type')
+            if kind not in ('color', 'textStyle'):
+                kind = 'token' if group == 'variables' else 'style'
+            action = 0 if name not in old else 2 if name not in new else 1
+            label = name.removeprefix('text/') if kind == 'textStyle' else name
+            yield f'{CHANGE_LABELS[kind][action]} {inline_name(label)}'
+
+
+def file_changes(files):
+    lines, seen_icons, other = [], set(), []
+    # The web file is canonical when a platform copy or editable source also changed.
+    for entry in sorted(files, key=lambda entry: not entry['filename'].startswith('web/')):
+        name, status = entry['filename'], entry.get('status')
+        old_name = entry.get('previous_filename')
+        icon = ICON_FILE.fullmatch(name)
+        action = {'added': 0, 'removed': 2}.get(status, 1)
+        if icon:
+            if icon.groups() in seen_icons:
+                continue
+            seen_icons.add(icon.groups())
+            previous = ICON_FILE.fullmatch(old_name) if isinstance(old_name, str) else None
+            if status == 'renamed' and previous:
+                seen_icons.add(previous.groups())
+                lines.append(f'Иконка {inline_name(previous[2])} переименована в {inline_name(icon[2])}')
+            else:
+                lines.append(f'{CHANGE_LABELS["icon"][action]} {inline_name(icon[2])}')
+        elif name.startswith(('web/', 'ios/', 'android/')) or name == 'Package.swift':
+            other.append((name, action))
+    return lines, seen_icons, other
+
+
+def is_generated_icon(name, icons):
+    if name == 'ios/Icons.swift':
+        return bool(icons)
+    return any(
+        name.startswith(f'ios/Icons.xcassets/icon-{category}-{icon}.imageset/') or
+        (name.startswith('android/res/drawable') and
+         name.rsplit('/', 1)[-1].rsplit('.', 1)[0] == f'icon_{category}_{icon}'.replace('-', '_'))
+        for category, icon in icons
+    )
+
+
+def release_changes(http, previous_commit, commit):
+    if previous_commit == commit:
+        return ['Ресурсы библиотеки не изменились']
+    comparison = f'{previous_commit}...{commit}'
+    details = f'[Полный список изменений]({GITHUB_WEB_COMPARE}{comparison})'
+    try:
+        status, data = http('GET', f'{GITHUB_COMPARE}{comparison}?per_page=1')
+        files = data.get('files') if isinstance(data, dict) else None
+        if (status != 200 or not isinstance(files, list) or data.get('status') != 'ahead' or
+                not all(isinstance(entry, dict) and isinstance(entry.get('filename'), str) for entry in files)):
+            raise NotifyError('DIFF_UNAVAILABLE')
+        if len(files) >= 300:
+            return ['Изменений слишком много для сообщения', details]
+        icons, seen_icons, other = file_changes(files)
+        tokens = []
+        if any(entry['filename'] == 'tokens.json' for entry in files):
+            tokens = list(token_changes(read_tokens(http, previous_commit), read_tokens(http, commit)))
+    except NotifyError as error:
+        if str(error) != 'DIFF_TOO_LARGE':
+            raise
+        return ['Изменений слишком много для сообщения', details]
+    changes = icons + tokens + [
+        f'{CHANGE_LABELS["file"][action]} {inline_name(name)}'
+        for name, action in other
+        if not is_generated_icon(name, seen_icons) and not (tokens and name in GENERATED_TOKEN_FILES)
+    ]
+    if not changes:
+        return ['Ресурсы библиотеки не изменились']
+    summary = ['**Что изменилось**', *(f'• {change}' for change in changes[:MAX_CHANGE_LINES])]
+    if len(changes) > MAX_CHANGE_LINES:
+        summary.append(f'Ещё изменений — {len(changes) - MAX_CHANGE_LINES}')
+    return [*summary, details]
+
+
+def release_text(version, changes):
     return '\n'.join([
         'Библиотека дизайна 101 обновлена',
         f'**Версия:** {version}',
         f'**Web:** npm install {PACKAGE}@{version}',
         f'**iOS и Android:** тег {version}',
+        '',
+        *changes,
     ])
 
 
@@ -244,6 +376,17 @@ def check_release(config, store, http):
         return version, 'not_new'
     if tag_commit(http, version) != commit:
         raise NotifyError('COMMIT_MISMATCH')
+    previous_commit = store['releases'].get(newest, {}).get('commit')
+    if not isinstance(previous_commit, str) or not COMMIT.fullmatch(previous_commit):
+        try:
+            previous_commit = tag_commit(http, newest)
+        except NotifyError as error:
+            if str(error) != 'TAG_ABSENT':
+                raise
+            previous_commit = None
+    changes = (release_changes(http, previous_commit, commit) if previous_commit
+               else ['Предыдущая версия недоступна для сравнения',
+                     f'[Исходники выпуска](https://github.com/101-APP/design/tree/{commit})'])
     # Only the current version is worth reading: an undelivered older one is dropped, not sent late.
     for release in store['releases'].values():
         for delivery in release['recipients'].values():
@@ -251,7 +394,7 @@ def check_release(config, store, http):
                 delivery['state'] = 'superseded'
     store['releases'][version] = {
         'commit': commit,
-        'text': release_text(version),
+        'text': release_text(version, changes),
         'recipients': {guid: {'client_message_id': client_message_id(version, guid), 'state': 'pending',
                               'attempts': 0, 'next_attempt_at': 0} for guid in config['recipients']},
     }
