@@ -83,6 +83,7 @@ public enum Icons: String, CaseIterable, Equatable {
     case monochromeDay = "icon-monochrome-day"
     case monochromeDeadline = "icon-monochrome-deadline"
     case monochromeDelete = "icon-monochrome-delete"
+    case monochromeDeleteLeft = "icon-monochrome-delete-left"
     case monochromeDescription = "icon-monochrome-description"
     case monochromeDesktop = "icon-monochrome-desktop"
     case monochromeDoc = "icon-monochrome-doc"
